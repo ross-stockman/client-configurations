@@ -1,5 +1,1 @@
-{
-  "clientId": "clientA",
-  "name": "Client A",
-  "extra": "foobar"
-}
+{ "clientId": "clientA", "name": "Client A" }

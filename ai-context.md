@@ -216,6 +216,12 @@ function validateEnvironmentPromotion(...) {}
 function validateBusinessRules(...) {}
 ```
 
+### 6. Auto-format JSON (Prettier)
+
+* All configuration files and scripts must be formatted using Prettier.
+* The validation script checks formatting and will fail if files are not compliant.
+* Use `npm run format` to fix formatting issues locally.
+
 ---
 
 ## ❌ Error Handling Requirements
@@ -295,7 +301,6 @@ isNewInPR(clientId, env)
 ## 🚀 Future Enhancements (Optional)
 
 * PR comment feedback via GitHub API
-* Auto-format JSON (Prettier)
 * Config diff visualization
 * Rule configuration via external file
 
