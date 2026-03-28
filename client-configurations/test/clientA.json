@@ -1,4 +1,5 @@
 {
   "clientId": "clientA",
-  "name": "Client A"
+  "name": "Client A",
+  "extra": "foobar"
 }
