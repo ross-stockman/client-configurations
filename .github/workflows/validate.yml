@@ -1,0 +1,47 @@
+name: Client Configuration Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    # Re-run if new changes are pushed to the branch
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for git diff
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build validation script
+        run: npm run build
+
+      - name: Run validation
+        env:
+          BASE_BRANCH: origin/main
+        run: |
+          # Fetch the target branch to ensure it exists for diffing
+          git fetch origin main:main
+          
+          # Run the validation script
+          npm run validate
+
+      - name: Report Success
+        if: success()
+        run: echo "✅ Validation passed. All configurations follow the schema and promotion rules."
+
+      - name: Report Failure
+        if: failure()
+        run: echo "❌ Validation failed. Please check the logs above for specific violations."
