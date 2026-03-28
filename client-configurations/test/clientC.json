@@ -1,4 +1,4 @@
 {
-  "clientId": "clientC",
-  "name": "Client C"
+  "id": "clientC",
+  "type": "Client C"
 }
