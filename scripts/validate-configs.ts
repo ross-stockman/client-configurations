@@ -102,14 +102,18 @@ function validatePromotionRules(matrix: ClientMatrix, changedFiles: Set<string>)
   const envOrder: Environment[] = ["test", "stage", "production"];
 
   for (const [clientId, envs] of Object.entries(matrix)) {
+    // Determine which environments this client is considered "new" or "changed" in for this validation run.
+    // In PR mode (changedFiles.size > 0), we only care about the changed environments.
+    // In Full mode (changedFiles.size === 0), we technically "check" everything, but Rule A should be skipped.
+    const isPrMode = changedFiles.size > 0;
     const introducedInEnvs = envOrder.filter(env => {
       const entry = envs[env];
-      return entry && (changedFiles.size === 0 || changedFiles.has(path.resolve(entry.filePath)));
+      return entry && (!isPrMode || changedFiles.has(path.resolve(entry.filePath)));
     });
 
-    // Rule A: No Multi-Environment Introduction
+    // Rule A: No Multi-Environment Introduction (Only relevant in PR mode)
     /*
-    if (introducedInEnvs.length > 1) {
+    if (isPrMode && introducedInEnvs.length > 1) {
       errors.push(`Client '${clientId}' cannot be introduced/modified in multiple environments in the same PR: ${introducedInEnvs.join(", ")}`);
     }
     */
@@ -150,10 +154,14 @@ function validateFile(filePath: string): string[] {
 
 // ---- Main ----
 
-function main() {
+interface MainOptions {
+  fullScan?: boolean;
+}
+
+function main(options: MainOptions = {}) {
   const args = process.argv.slice(2);
 
-  if (args.length > 0) {
+  if (args.length > 0 && !args[0].startsWith("--")) {
     // Single file validation mode
     const filePath = path.resolve(args[0]);
     console.log(`🔍 Validating single file: ${filePath}`);
@@ -169,11 +177,17 @@ function main() {
     }
   }
 
-  // Full repository validation mode (PR mode)
-  const changedFiles = getChangedFiles();
+  // Check for --full flag
+  const isFullScan = options.fullScan || args.includes("--full");
+
+  // Full repository validation mode (PR mode or Full Scan)
+  const changedFiles = isFullScan ? new Set<string>() : getChangedFiles();
   const allFiles = getAllConfigFiles();
 
   const { matrix, errors: schemaErrors } = buildMatrix(allFiles);
+
+  // If it's a full scan, we might want to skip "Rule A" (Multi-environment introduction) 
+  // because that's a PR-specific rule. Rule B (Promotion Order) is always relevant.
   const promotionErrors = validatePromotionRules(matrix, changedFiles);
 
   const allErrors = [...schemaErrors, ...promotionErrors];

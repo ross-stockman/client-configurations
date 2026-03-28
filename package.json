@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "validate": "node dist/validate-configs.js",
+    "validate:full": "node dist/validate-configs.js --full",
     "validate:file": "ts-node scripts/validate-configs.ts"
   },
   "keywords": [],
