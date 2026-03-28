@@ -7,7 +7,9 @@
     "build": "tsc",
     "validate": "node dist/validate-configs.js",
     "validate:full": "node dist/validate-configs.js --full",
-    "validate:file": "ts-node scripts/validate-configs.ts"
+    "validate:file": "ts-node scripts/validate-configs.ts",
+    "format": "prettier --write \"**/*.json\" \"scripts/**/*.ts\"",
+    "format:check": "prettier --check \"**/*.json\" \"scripts/**/*.ts\""
   },
   "keywords": [],
   "author": "",
@@ -18,6 +20,8 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "@types/prettier": "^2.7.3",
+    "prettier": "^3.8.1",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2"
   }

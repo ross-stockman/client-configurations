@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import Ajv from "ajv";
 import { execSync } from "child_process";
+import * as prettier from "prettier";
 
 // ---- Types ----
 
@@ -32,9 +33,16 @@ function getChangedFiles(): Set<string> {
   try {
     const baseBranch = process.env.BASE_BRANCH || "origin/main";
     const diff = execSync(`git diff --name-only ${baseBranch}...HEAD`, { encoding: "utf-8" });
-    return new Set(diff.split("\n").filter(Boolean).map(f => path.resolve(f)));
+    return new Set(
+      diff
+        .split("\n")
+        .filter(Boolean)
+        .map((f) => path.resolve(f))
+    );
   } catch (e) {
-    console.warn("⚠️ Could not detect git diff, assuming all files are 'new' for validation purposes.");
+    console.warn(
+      "⚠️ Could not detect git diff, assuming all files are 'new' for validation purposes."
+    );
     return new Set();
   }
 }
@@ -63,7 +71,10 @@ function getAllConfigFiles(): { env: Environment; filePath: string }[] {
 
 // ---- Validation Logic ----
 
-function buildMatrix(files: { env: Environment; filePath: string }[]): { matrix: ClientMatrix; errors: string[] } {
+function buildMatrix(files: { env: Environment; filePath: string }[]): {
+  matrix: ClientMatrix;
+  errors: string[];
+} {
   const matrix: ClientMatrix = {};
   const errors: string[] = [];
 
@@ -88,7 +99,9 @@ function buildMatrix(files: { env: Environment; filePath: string }[]): { matrix:
     }
 
     if (matrix[clientId][env]) {
-      errors.push(`Duplicate clientId '${clientId}' found in same environment '${env}': ${filePath} and ${matrix[clientId][env]?.filePath}`);
+      errors.push(
+        `Duplicate clientId '${clientId}' found in same environment '${env}': ${filePath} and ${matrix[clientId][env]?.filePath}`
+      );
     }
 
     matrix[clientId][env] = { config, filePath };
@@ -106,7 +119,7 @@ function validatePromotionRules(matrix: ClientMatrix, changedFiles: Set<string>)
     // In PR mode (changedFiles.size > 0), we only care about the changed environments.
     // In Full mode (changedFiles.size === 0), we technically "check" everything, but Rule A should be skipped.
     const isPrMode = changedFiles.size > 0;
-    const introducedInEnvs = envOrder.filter(env => {
+    const introducedInEnvs = envOrder.filter((env) => {
       const entry = envs[env];
       return entry && (!isPrMode || changedFiles.has(path.resolve(entry.filePath)));
     });
@@ -124,7 +137,9 @@ function validatePromotionRules(matrix: ClientMatrix, changedFiles: Set<string>)
       const prevEnv = envOrder[i - 1];
 
       if (envs[currentEnv] && !envs[prevEnv]) {
-        errors.push(`Promotion error: Client '${clientId}' exists in '${currentEnv}' but is missing from lower environment '${prevEnv}'`);
+        errors.push(
+          `Promotion error: Client '${clientId}' exists in '${currentEnv}' but is missing from lower environment '${prevEnv}'`
+        );
       }
     }
   }
@@ -152,24 +167,40 @@ function validateFile(filePath: string): string[] {
   return [];
 }
 
+async function checkFormatting(filePath: string): Promise<string[]> {
+  const content = fs.readFileSync(filePath, "utf-8");
+  const options = (await prettier.resolveConfig(filePath)) || {};
+  const isFormatted = await prettier.check(content, { ...options, filepath: filePath });
+
+  if (!isFormatted) {
+    return [
+      `Formatting error in ${filePath}: File is not formatted according to Prettier rules. Run 'npm run format' to fix.`
+    ];
+  }
+
+  return [];
+}
+
 // ---- Main ----
 
 interface MainOptions {
   fullScan?: boolean;
 }
 
-function main(options: MainOptions = {}) {
+async function main(options: MainOptions = {}) {
   const args = process.argv.slice(2);
 
   if (args.length > 0 && !args[0].startsWith("--")) {
     // Single file validation mode
     const filePath = path.resolve(args[0]);
     console.log(`🔍 Validating single file: ${filePath}`);
-    const errors = validateFile(filePath);
+    const schemaErrors = validateFile(filePath);
+    const formatErrors = filePath.endsWith(".json") ? await checkFormatting(filePath) : [];
+    const errors = [...schemaErrors, ...formatErrors];
 
     if (errors.length > 0) {
       console.error("\n❌ Validation failed:\n");
-      errors.forEach(e => console.error(`- ${e}`));
+      errors.forEach((e) => console.error(`- ${e}`));
       process.exit(1);
     } else {
       console.log("✅ Validation passed");
@@ -186,15 +217,26 @@ function main(options: MainOptions = {}) {
 
   const { matrix, errors: schemaErrors } = buildMatrix(allFiles);
 
-  // If it's a full scan, we might want to skip "Rule A" (Multi-environment introduction) 
+  // If it's a full scan, we might want to skip "Rule A" (Multi-environment introduction)
   // because that's a PR-specific rule. Rule B (Promotion Order) is always relevant.
   const promotionErrors = validatePromotionRules(matrix, changedFiles);
 
-  const allErrors = [...schemaErrors, ...promotionErrors];
+  // Check formatting for all files being validated (those in client-configurations)
+  const formatErrors: string[] = [];
+  for (const { filePath } of allFiles) {
+    // In PR mode, only check formatting of changed files
+    const isPrMode = changedFiles.size > 0;
+    if (!isPrMode || changedFiles.has(path.resolve(filePath))) {
+      const errors = await checkFormatting(filePath);
+      formatErrors.push(...errors);
+    }
+  }
+
+  const allErrors = [...schemaErrors, ...promotionErrors, ...formatErrors];
 
   if (allErrors.length > 0) {
     console.error("\n❌ Validation failed:\n");
-    allErrors.forEach(e => console.error(`- ${e}`));
+    allErrors.forEach((e) => console.error(`- ${e}`));
     process.exit(1);
   } else {
     console.log("✅ Validation passed");
