@@ -44,7 +44,7 @@ function getAllConfigFiles(): { env: Environment; filePath: string }[] {
   const results: { env: Environment; filePath: string }[] = [];
 
   for (const env of envs) {
-    const dir = path.resolve(__dirname, "..", env);
+    const dir = path.resolve(__dirname, "..", "client-configurations", env);
     if (!fs.existsSync(dir)) continue;
 
     const files = fs.readdirSync(dir);
@@ -126,9 +126,48 @@ function validatePromotionRules(matrix: ClientMatrix, changedFiles: Set<string>)
   return errors;
 }
 
+function validateFile(filePath: string): string[] {
+  if (!fs.existsSync(filePath)) {
+    return [`File not found: ${filePath}`];
+  }
+
+  const raw = fs.readFileSync(filePath, "utf-8");
+  let config: BaseConfig;
+  try {
+    config = JSON.parse(raw);
+  } catch (e) {
+    return [`Invalid JSON in ${filePath}`];
+  }
+
+  if (!validate(config)) {
+    return [`Schema error in ${filePath}: ${ajv.errorsText(validate.errors)}`];
+  }
+
+  return [];
+}
+
 // ---- Main ----
 
 function main() {
+  const args = process.argv.slice(2);
+
+  if (args.length > 0) {
+    // Single file validation mode
+    const filePath = path.resolve(args[0]);
+    console.log(`🔍 Validating single file: ${filePath}`);
+    const errors = validateFile(filePath);
+
+    if (errors.length > 0) {
+      console.error("\n❌ Validation failed:\n");
+      errors.forEach(e => console.error(`- ${e}`));
+      process.exit(1);
+    } else {
+      console.log("✅ Validation passed");
+      process.exit(0);
+    }
+  }
+
+  // Full repository validation mode (PR mode)
   const changedFiles = getChangedFiles();
   const allFiles = getAllConfigFiles();
 

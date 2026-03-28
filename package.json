@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "validate": "node dist/validate-configs.js"
+    "validate": "node dist/validate-configs.js",
+    "validate:file": "ts-node scripts/validate-configs.ts"
   },
   "keywords": [],
   "author": "",

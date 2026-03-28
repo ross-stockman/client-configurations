@@ -29,15 +29,14 @@ AI assistants (e.g., GitHub Copilot) should use this document as the **source of
 ## 🗂️ Repository Structure
 
 ```plaintext
-/test/
-  clientA.json
-  clientB.json
-
-/stage/
-  clientA.json
-
-/production/
-  clientA.json
+/client-configurations/
+  /test/
+    clientA.json
+    clientB.json
+  /stage/
+    clientA.json
+  /production/
+    clientA.json
 
 /scripts/
   validate-configs.ts
