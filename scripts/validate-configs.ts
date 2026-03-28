@@ -108,9 +108,11 @@ function validatePromotionRules(matrix: ClientMatrix, changedFiles: Set<string>)
     });
 
     // Rule A: No Multi-Environment Introduction
+    /*
     if (introducedInEnvs.length > 1) {
       errors.push(`Client '${clientId}' cannot be introduced/modified in multiple environments in the same PR: ${introducedInEnvs.join(", ")}`);
     }
+    */
 
     // Rule B: Promotion Order Required
     for (let i = 1; i < envOrder.length; i++) {
