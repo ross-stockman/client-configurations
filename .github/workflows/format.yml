@@ -46,7 +46,7 @@ jobs:
           echo "$CHANGED_FILES"
           
           # Run prettier check on changed files and capture output
-          npx prettier --check $CHANGED_FILES > format_output.txt 2>&1 || FORMAT_EXIT_CODE=$?
+          npx prettier --check --no-color $CHANGED_FILES > format_output.txt 2>&1 || FORMAT_EXIT_CODE=$?
           
           # Output to console
           cat format_output.txt
@@ -69,12 +69,13 @@ jobs:
             const output = process.env.FORMAT_LOG;
             const success = "${{ steps.format-check.outcome }}" === "success";
             const header = success ? "### ✅ Formatting Passed" : "### ❌ Formatting Failed";
+            const instructions = success ? "" : "\n\n**To fix formatting issues locally, run:**\n`npm run format`";
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `${header}\n\n\`\`\`plaintext\n${output}\n\`\`\``
+              body: `${header}\n\n\`\`\`plaintext\n${output}\n\`\`\`${instructions}`
             });
         env:
           FORMAT_LOG: ${{ steps.format-check.outputs.FORMAT_LOG }}

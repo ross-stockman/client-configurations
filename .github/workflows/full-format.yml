@@ -32,4 +32,10 @@ jobs:
         run: npm ci
 
       - name: Run full format check
-        run: npm run format:check
+        run: |
+          if ! npm run format:check; then
+            echo "❌ Formatting issues found. To fix them locally, run:"
+            echo "   npm run format"
+            exit 1
+          fi
+          echo "✅ All files are correctly formatted."
