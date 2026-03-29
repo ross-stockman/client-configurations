@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 import Ajv from "ajv";
 import { execSync } from "child_process";
-import * as prettier from "prettier";
 
 // ---- Types ----
 
@@ -167,20 +166,6 @@ function validateFile(filePath: string): string[] {
   return [];
 }
 
-async function checkFormatting(filePath: string): Promise<string[]> {
-  const content = fs.readFileSync(filePath, "utf-8");
-  const options = (await prettier.resolveConfig(filePath)) || {};
-  const isFormatted = await prettier.check(content, { ...options, filepath: filePath });
-
-  if (!isFormatted) {
-    return [
-      `Formatting error in ${filePath}: File is not formatted according to Prettier rules. Run 'npm run format' to fix.`
-    ];
-  }
-
-  return [];
-}
-
 // ---- Main ----
 
 interface MainOptions {
@@ -194,9 +179,7 @@ async function main(options: MainOptions = {}) {
     // Single file validation mode
     const filePath = path.resolve(args[0]);
     console.log(`🔍 Validating single file: ${filePath}`);
-    const schemaErrors = validateFile(filePath);
-    const formatErrors = filePath.endsWith(".json") ? await checkFormatting(filePath) : [];
-    const errors = [...schemaErrors, ...formatErrors];
+    const errors = validateFile(filePath);
 
     if (errors.length > 0) {
       console.error("\n❌ Validation failed:\n");
@@ -221,18 +204,7 @@ async function main(options: MainOptions = {}) {
   // because that's a PR-specific rule. Rule B (Promotion Order) is always relevant.
   const promotionErrors = validatePromotionRules(matrix, changedFiles);
 
-  // Check formatting for all files being validated (those in client-configurations)
-  const formatErrors: string[] = [];
-  for (const { filePath } of allFiles) {
-    // In PR mode, only check formatting of changed files
-    const isPrMode = changedFiles.size > 0;
-    if (!isPrMode || changedFiles.has(path.resolve(filePath))) {
-      const errors = await checkFormatting(filePath);
-      formatErrors.push(...errors);
-    }
-  }
-
-  const allErrors = [...schemaErrors, ...promotionErrors, ...formatErrors];
+  const allErrors = [...schemaErrors, ...promotionErrors];
 
   if (allErrors.length > 0) {
     console.error("\n❌ Validation failed:\n");

@@ -8,7 +8,7 @@ This project manages and validates client-specific configuration files across mu
 - **Environment Promotion Rules**: Enforces a strict `test` → `stage` → `production` promotion order.
 - **Duplicate Detection**: Ensures `clientId` is globally unique across all environments.
 - **PR-Aware Validation**: Automatically detects and validates changed files in Pull Requests.
-- **Automated Formatting**: Uses [Prettier](https://prettier.io/) to maintain consistent JSON and TypeScript formatting.
+- **Automated Formatting**: Uses [Prettier](https://prettier.io/) to maintain consistent JSON and TypeScript formatting via separate GitHub Actions.
 
 ## 📂 Project Structure
 
