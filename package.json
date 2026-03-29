@@ -9,7 +9,7 @@
     "validate:full": "node dist/validate-configs.js --full",
     "validate:file": "ts-node scripts/validate-configs.ts",
     "format": "prettier --write \"**/*.json\" \"scripts/**/*.ts\"",
-    "format:check": "prettier --check \"**/*.json\" \"scripts/**/*.ts\""
+    "format:check": "prettier --check --no-color \"**/*.json\" \"scripts/**/*.ts\""
   },
   "keywords": [],
   "author": "",

@@ -46,7 +46,7 @@ jobs:
           echo "$CHANGED_FILES"
           
           # Run prettier check on changed files and capture output
-          npx prettier --check $CHANGED_FILES > format_output.txt 2>&1 || FORMAT_EXIT_CODE=$?
+          npx prettier --check --no-color $CHANGED_FILES > format_output.txt 2>&1 || FORMAT_EXIT_CODE=$?
           
           # Output to console
           cat format_output.txt
