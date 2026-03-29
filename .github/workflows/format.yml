@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -27,6 +30,7 @@ jobs:
         run: npm ci
 
       - name: Check formatting of changed files
+        id: format-check
         run: |
           git fetch origin main:main
           # Get list of changed .json and .ts files
@@ -34,11 +38,43 @@ jobs:
           
           if [ -z "$CHANGED_FILES" ]; then
             echo "No JSON or TypeScript files changed."
+            echo "FORMAT_LOG=No JSON or TypeScript files changed." >> "$GITHUB_OUTPUT"
             exit 0
           fi
           
           echo "Checking formatting for:"
           echo "$CHANGED_FILES"
           
-          # Run prettier check on changed files
-          npx prettier --check $CHANGED_FILES
+          # Run prettier check on changed files and capture output
+          npx prettier --check $CHANGED_FILES > format_output.txt 2>&1 || FORMAT_EXIT_CODE=$?
+          
+          # Output to console
+          cat format_output.txt
+          
+          # Prepare output for PR comment
+          {
+            echo "FORMAT_LOG<<EOF"
+            cat format_output.txt
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          
+          # Exit with original code
+          exit ${FORMAT_EXIT_CODE:-0}
+
+      - name: Post PR Comment
+        uses: actions/github-script@v7
+        if: always() && github.event_name == 'pull_request'
+        with:
+          script: |
+            const output = process.env.FORMAT_LOG;
+            const success = "${{ steps.format-check.outcome }}" === "success";
+            const header = success ? "### ✅ Formatting Passed" : "### ❌ Formatting Failed";
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${header}\n\n\`\`\`plaintext\n${output}\n\`\`\``
+            });
+        env:
+          FORMAT_LOG: ${{ steps.format-check.outputs.FORMAT_LOG }}
